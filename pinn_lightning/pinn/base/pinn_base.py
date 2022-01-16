@@ -37,13 +37,6 @@ class PINNBase(ABC, pl.LightningModule):
         raise NotImplementedError
 
     @abstractmethod
-    def configure_lrs(self):
-        """
-        Define learning rate and weigt decay for PINN modules.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
     def configure_tasks(self):
         """
         Define tasks for PINN modules.

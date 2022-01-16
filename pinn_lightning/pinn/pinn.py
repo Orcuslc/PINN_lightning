@@ -88,33 +88,24 @@ class PINN(PINNBase):
         return [self.forward_module.parameters()]
 
     def configure_optimizers(self):
-        assert hasattr(self, "params")
-        return torch.optim.Adam(self.params)
-
-    def configure_lrs(
-        self, 
-        lr: Union[float, List[float]],
-        weight_decay: Union[float, List[float]],
-    ):
-        if isinstance(lr, list):
-            assert isinstance(weight_decay, list) and len(weight_decay) == len(lr)
-            assert len(lr) == len(self.param_groups)
+        """
+        Must be manually configured.
+        """
+        assert hasattr(self, "_optimizer")
+        if self._lr_scheduler is None:
+            return self._optimizer
         else:
-            assert not isinstance(weight_decay, list)
-            lr = [lr for _ in range(len(self.param_groups))]
-            weight_decay = [weight_decay for _ in range(len(self.param_groups))]
-        
-        params = [
-            {
-                "params": param,
-                "lr": _lr,
-                "weight_decay": _weight_decay
+            return {
+                "optimizer": self._optimizer,
+                "lr_scheduler": {
+                    "scheduler": self._lr_scheduler,
+                    "monitor": "train_loss",
+                },
             }
-            for (param, _lr, _weight_decay) in zip(
-                self.param_groups, lr, weight_decay
-            )
-        ]
-        self.params = params
+
+    def configure_optimizers_and_schedulers(self, optimizer, lr_scheduler=None):
+        self._optimizer = optimizer
+        self._lr_scheduler = lr_scheduler
 
 
 class InversePINN(PINN):
