@@ -10,9 +10,11 @@ class Task:
         n_output: int,
         loss_fns: Union[_Loss, List[_Loss]],
         loss_weights: Union[float, List[float]],
+        name: str = "",
     ):
         self.n_input = n_input
         self.n_output = n_output
+        self.name = name
 
         if isinstance(loss_fns, list):
             assert len(loss_fns) == n_output

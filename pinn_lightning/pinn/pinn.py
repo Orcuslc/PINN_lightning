@@ -71,16 +71,18 @@ class PINN(PINNBase):
     def training_step(self, batch, batch_idx):
         losses, weighted_loss = self._step(batch)
         self.log(f"train_loss", weighted_loss, on_step=False, on_epoch=True)
-        for i in range(len(self.tasks)):
-            self.log(f"train_loss_{i}", losses[i], on_step=False, on_epoch=True)
+        for i, task in enumerate(self.tasks):
+            name = task.name if task.name != "" else i
+            self.log(f"train_loss_{name}", losses[i], on_step=False, on_epoch=True)
         return weighted_loss
 
     def validation_step(self, batch, batch_idx):
         torch.set_grad_enabled(True)
         losses, weighted_loss = self._step(batch)
         self.log(f"valid_loss", weighted_loss, on_step=False, on_epoch=True)
-        for i in range(len(self.tasks)):
-            self.log(f"valid_loss_{i}", losses[i], on_step=False, on_epoch=True)
+        for i, task in enumerate(self.tasks):
+            name = task.name if task.name != "" else i
+            self.log(f"valid_loss_{name}", losses[i], on_step=False, on_epoch=True)
         return weighted_loss
 
     @property
