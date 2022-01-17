@@ -42,6 +42,7 @@ class PINN(PINNBase):
         self.tasks = tasks
         self.loss_fns = flatten_nested_list([task.loss_fns for task in tasks])
         self.loss_weights = flatten_nested_list([task.loss_weights for task in tasks])
+        self.task_names = flatten_nested_list([task.names for task in tasks])
 
     def _split_io(self, batch):
         assert hasattr(self, "tasks")
@@ -71,8 +72,8 @@ class PINN(PINNBase):
     def training_step(self, batch, batch_idx):
         losses, weighted_loss = self._step(batch)
         self.log(f"train_loss", weighted_loss, on_step=False, on_epoch=True)
-        for i, task in enumerate(self.tasks):
-            name = task.name if task.name != "" else i
+        for i in range(len(losses)):
+            name = self.task_names[i] if self.task_names[i] != "" else i
             self.log(f"train_loss_{name}", losses[i], on_step=False, on_epoch=True)
         return weighted_loss
 
@@ -80,8 +81,8 @@ class PINN(PINNBase):
         torch.set_grad_enabled(True)
         losses, weighted_loss = self._step(batch)
         self.log(f"valid_loss", weighted_loss, on_step=False, on_epoch=True)
-        for i, task in enumerate(self.tasks):
-            name = task.name if task.name != "" else i
+        for i in range(len(losses)):
+            name = self.task_names[i] if self.task_names[i] != "" else i
             self.log(f"valid_loss_{name}", losses[i], on_step=False, on_epoch=True)
         return weighted_loss
 
