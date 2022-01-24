@@ -1,5 +1,11 @@
-from ast import Call
-from typing import Callable, List
+from typing import Callable, List, Union, Optional
+from itertools import cycle
+
+import os, sys
+from xmlrpc.client import Boolean
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath("./"))))
+
+from pinn_lightning.utils.utils import convert_to_list
 
 import torch
 from torch.utils.data import (
@@ -30,6 +36,17 @@ class ConcatDataLoader():
         return tuple(out)
 
 
+class CycleDataLoader():
+    """
+    Class to cycle one dataloader and avoid StopIteration
+    """
+    def __init__(self, dataloader):
+        self.dataloader = dataloader
+
+    def __iter__(self):
+        return cycle(iter(self.dataloader))
+
+
 class PINNDataModule(LightningDataModule):
     """
     Basic PINN data module.
@@ -39,13 +56,21 @@ class PINNDataModule(LightningDataModule):
         datasets: List[Dataset],
         collate_fns: List[Callable],
         valid_splits: List[float],
-        batch_sizes: List[int]
+        batch_sizes: List[int],
+        shuffle: List[bool],
+        do_not_split_dataset_index: Optional[Union[int, List[int]]] = None,
+        cycle_dataloader_index: Optional[Union[int, List[int]]] = None,
     ):
-        assert len(datasets) == len(collate_fns) and len(collate_fns) == len(valid_splits) and len(valid_splits) == len(batch_sizes)
+        assert len(datasets) == len(collate_fns) \
+            and len(collate_fns) == len(valid_splits) \
+            and len(valid_splits) == len(batch_sizes)
         self.datasets = datasets
         self.collate_fns = collate_fns
         self.valid_splits = valid_splits
         self.batch_sizes = batch_sizes
+        self.shuffle = shuffle
+        self.do_not_split_dataset_index = convert_to_list(do_not_split_dataset_index)
+        self.cycle_dataloader_index = convert_to_list(cycle_dataloader_index)
 
     def prepare_data(self) -> None:
         pass
@@ -61,41 +86,48 @@ class PINNDataModule(LightningDataModule):
         return train_dataset, valid_dataset
 
     def setup(self, stage=None):
-        datasets_split = [
-            self.train_valid_split(dataset, valid_split)
-            for (dataset, valid_split) in zip(
-                self.datasets, self.valid_splits
-            )
-        ]
+        datasets_split = []
+        for (index, (dataset, valid_split)) in enumerate(
+            zip(self.datasets, self.valid_splits)
+        ):
+            if index in self.do_not_split_dataset_index:
+                datasets_split.append([dataset, dataset])
+            else:
+                datasets_split.append(
+                    self.train_valid_split(dataset, valid_split)
+                )
         self.train_datasets = [pair[0] for pair in datasets_split]
         self.valid_datasets = [pair[1] for pair in datasets_split]
 
     def train_dataloader(self):
-        dataloaders = [
-            DataLoader(
+        dataloaders = []
+        for index, (dataset, batch_size, collate_fn, shuffle) in enumerate(
+            zip(self.train_datasets, self.batch_sizes, self.collate_fns, self.shuffle)
+        ):
+            dataloader = DataLoader(
                 dataset, 
                 batch_size=batch_size, 
                 collate_fn=collate_fn,
-                shuffle=True,
+                shuffle=shuffle,
             )
-            for (dataset, batch_size, collate_fn) in zip(
-                self.train_datasets, self.batch_sizes, self.collate_fns
-            )
-        ]
+            if index in self.cycle_dataloader_index:
+                dataloader = CycleDataLoader(dataloader)
+            dataloaders.append(dataloader)
         return ConcatDataLoader(*dataloaders)
 
     def val_dataloader(self):
-        dataloaders = [
-            DataLoader(
+        dataloaders = []
+        for index, (dataset, batch_size, collate_fn, shuffle) in enumerate(
+            zip(self.valid_datasets, self.batch_sizes, self.collate_fns, self.shuffle)
+        ):
+            dataloader = DataLoader(
                 dataset, 
                 batch_size=batch_size, 
                 collate_fn=collate_fn,
-                shuffle=True,
+                shuffle=shuffle,
             )
-            for (dataset, batch_size, collate_fn) in zip(
-                self.valid_datasets, self.batch_sizes, self.collate_fns
-            )
-        ]
+            if index in self.cycle_dataloader_index:
+                dataloader = CycleDataLoader(dataloader)
+            dataloaders.append(dataloader)
         return ConcatDataLoader(*dataloaders)
-
 

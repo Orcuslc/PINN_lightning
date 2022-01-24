@@ -1,7 +1,12 @@
 from typing import List, Union
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath("./"))))
+
+from pinn_lightning.utils.utils import convert_to_list
+
 import torch
 from torch.nn.modules.loss import _Loss
-
 
 class Task:
     def __init__(
@@ -14,22 +19,9 @@ class Task:
     ):
         self.n_input = n_input
         self.n_output = n_output
-        self.names = names
-
-        if isinstance(loss_fns, list):
-            assert len(loss_fns) == n_output
-            self.loss_fns = loss_fns
-        else:
-            self.loss_fns = [loss_fns for _ in range(n_output)]
-        
-        if isinstance(loss_weights, list):
-            assert len(loss_weights) == n_output
-            self.loss_weights = loss_weights
-        else:
-            self.loss_weights = [loss_weights for _ in range(n_output)]
-
-        if isinstance(names, list):
-            assert len(names) == n_output
-            self.names = names
-        else:
-            self.names = [names for _ in range(n_output)]
+        self.loss_fns = convert_to_list(loss_fns, n_output, assertion=True)
+        self.loss_weights = convert_to_list(loss_weights, n_output, assertion=True)
+        self.names = convert_to_list(names, n_output, assertion=True)
+        if len(self.names) > 1 and self.names[0] == self.names[1]:
+            for i in range(len(self.names)):
+                self.names[i] = self.names[i] + "_" + str(i)

@@ -46,6 +46,8 @@ class PINN(PINNBase):
 
     def _split_io(self, batch):
         assert hasattr(self, "tasks")
+        for i, (b, task) in enumerate(zip(batch, self.tasks)):
+            assert len(b) == task.n_input + task.n_output, f"Data I/O mismatch in Task {i}."
         inputs = [b[:task.n_input] for (b, task) in zip(batch, self.tasks)]
         targets = [b[task.n_input:] for (b, task) in zip(batch, self.tasks)]
         targets = flatten_nested_list(targets)
