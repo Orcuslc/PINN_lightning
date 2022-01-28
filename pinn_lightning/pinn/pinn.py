@@ -55,7 +55,7 @@ class PINN(PINNBase):
 
     def _step(self, batch):
         batch_input, batch_target = self._split_io(batch)
-        batch_output = self.get_output(batch_input)
+        batch_output = self.get_outputs(batch_input)
         assert len(batch_output) == len(batch_target)
 
         losses = torch.hstack([
@@ -87,10 +87,6 @@ class PINN(PINNBase):
             name = self.task_names[i] if self.task_names[i] != "" else i
             self.log(f"valid_loss_{name}", losses[i], on_step=False, on_epoch=True)
         return weighted_loss
-
-    @property
-    def param_groups(self):
-        return [self.forward_module.parameters()]
 
     def configure_optimizers(self):
         """
