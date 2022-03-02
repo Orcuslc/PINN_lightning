@@ -109,6 +109,7 @@ class PINNDataModule(LightningDataModule):
                 batch_size=batch_size, 
                 collate_fn=collate_fn,
                 shuffle=shuffle,
+                pin_memory=True,
             )
             if index in self.cycle_dataloader_index:
                 dataloader = CycleDataLoader(dataloader)
@@ -125,9 +126,55 @@ class PINNDataModule(LightningDataModule):
                 batch_size=batch_size, 
                 collate_fn=collate_fn,
                 shuffle=shuffle,
+                pin_memory=True,
             )
             if index in self.cycle_dataloader_index:
                 dataloader = CycleDataLoader(dataloader)
             dataloaders.append(dataloader)
         return ConcatDataLoader(*dataloaders)
 
+
+class PINNDataModuleWithoutValidation(LightningDataModule):
+    """
+        PINN data module without validation.
+    """
+
+    def __init__(
+        self,
+        datasets: List[Dataset],
+        collate_fns: List[Callable],
+        batch_sizes: List[int],
+        shuffle: List[bool],
+        cycle_dataloader_index: Optional[Union[int, List[int]]] = None,
+    ):
+        assert len(datasets) == len(collate_fns) \
+            and len(collate_fns) == len(batch_sizes)
+        self.datasets = datasets
+        self.collate_fns = collate_fns
+        self.batch_sizes = batch_sizes
+        self.shuffle = shuffle
+        self.cycle_dataloader_index = convert_to_list(cycle_dataloader_index)
+
+    def prepare_data(self) -> None:
+        pass
+
+    def setup(self, stage=None):
+        self.train_datasets = self.datasets
+
+    def train_dataloader(self):
+        dataloaders = []
+        for index, (dataset, batch_size, collate_fn, shuffle) in enumerate(
+            zip(self.train_datasets, self.batch_sizes,
+                self.collate_fns, self.shuffle)
+        ):
+            dataloader = DataLoader(
+                dataset,
+                batch_size=batch_size,
+                collate_fn=collate_fn,
+                shuffle=shuffle,
+                pin_memory=True,
+            )
+            if index in self.cycle_dataloader_index:
+                dataloader = CycleDataLoader(dataloader)
+            dataloaders.append(dataloader)
+        return ConcatDataLoader(*dataloaders)

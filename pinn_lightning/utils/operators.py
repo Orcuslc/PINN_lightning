@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 def grad(u, x):
-    return torch.autograd.grad(u, x, grad_outputs = torch.ones_like(x), create_graph = True, only_inputs = True)[0]
+    return torch.autograd.grad(u, x, grad_outputs = torch.ones_like(u), create_graph = True, only_inputs = True)[0]
 
 def _grad(u, x):
     """

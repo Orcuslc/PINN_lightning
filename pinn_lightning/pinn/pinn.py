@@ -43,6 +43,7 @@ class PINN(PINNBase):
         self.loss_fns = flatten_nested_list([task.loss_fns for task in tasks])
         self.loss_weights = flatten_nested_list([task.loss_weights for task in tasks])
         self.task_names = flatten_nested_list([task.names for task in tasks])
+        self._loss_weights_converted = False
 
     def _split_io(self, batch):
         assert hasattr(self, "tasks")
@@ -54,6 +55,10 @@ class PINN(PINNBase):
         return inputs, targets
 
     def _step(self, batch):
+        if not self._loss_weights_converted:
+            self.loss_weights = [w.to(self.device) for w in self.loss_weights]
+            self._loss_weights_converted = True
+
         batch_input, batch_target = self._split_io(batch)
         batch_output = self.get_outputs(batch_input)
         assert len(batch_output) == len(batch_target)
@@ -73,19 +78,19 @@ class PINN(PINNBase):
 
     def training_step(self, batch, batch_idx):
         losses, weighted_loss = self._step(batch)
-        self.log(f"train_loss", weighted_loss, on_step=False, on_epoch=True)
+        self.log(f"train_loss", weighted_loss, on_step=False, on_epoch=True, batch_size=1)
         for i in range(len(losses)):
             name = self.task_names[i] if self.task_names[i] != "" else i
-            self.log(f"train_loss_{name}", losses[i], on_step=False, on_epoch=True)
+            self.log(f"train_loss_{name}", losses[i], on_step=False, on_epoch=True, batch_size=1)
         return weighted_loss
 
     def validation_step(self, batch, batch_idx):
         torch.set_grad_enabled(True)
         losses, weighted_loss = self._step(batch)
-        self.log(f"valid_loss", weighted_loss, on_step=False, on_epoch=True)
+        self.log(f"valid_loss", weighted_loss, on_step=False, on_epoch=True, batch_size=1)
         for i in range(len(losses)):
             name = self.task_names[i] if self.task_names[i] != "" else i
-            self.log(f"valid_loss_{name}", losses[i], on_step=False, on_epoch=True)
+            self.log(f"valid_loss_{name}", losses[i], on_step=False, on_epoch=True, batch_size=1)
         return weighted_loss
 
     def configure_optimizers(self):
