@@ -60,6 +60,7 @@ class PINNDataModule(LightningDataModule):
         shuffle: List[bool],
         do_not_split_dataset_index: Optional[Union[int, List[int]]] = None,
         cycle_dataloader_index: Optional[Union[int, List[int]]] = None,
+        pin_memory: bool = True
     ):
         assert len(datasets) == len(collate_fns) \
             and len(collate_fns) == len(valid_splits) \
@@ -71,6 +72,7 @@ class PINNDataModule(LightningDataModule):
         self.shuffle = shuffle
         self.do_not_split_dataset_index = convert_to_list(do_not_split_dataset_index)
         self.cycle_dataloader_index = convert_to_list(cycle_dataloader_index)
+        self.pin_memory = pin_memory
 
     def prepare_data(self) -> None:
         pass
@@ -109,7 +111,7 @@ class PINNDataModule(LightningDataModule):
                 batch_size=batch_size, 
                 collate_fn=collate_fn,
                 shuffle=shuffle,
-                pin_memory=True,
+                pin_memory=self.pin_memory,
             )
             if index in self.cycle_dataloader_index:
                 dataloader = CycleDataLoader(dataloader)
@@ -126,7 +128,7 @@ class PINNDataModule(LightningDataModule):
                 batch_size=batch_size, 
                 collate_fn=collate_fn,
                 shuffle=shuffle,
-                pin_memory=True,
+                pin_memory=self.pin_memory,
             )
             if index in self.cycle_dataloader_index:
                 dataloader = CycleDataLoader(dataloader)
@@ -146,6 +148,7 @@ class PINNDataModuleWithoutValidation(LightningDataModule):
         batch_sizes: List[int],
         shuffle: List[bool],
         cycle_dataloader_index: Optional[Union[int, List[int]]] = None,
+        pin_memory: bool = True,
     ):
         assert len(datasets) == len(collate_fns) \
             and len(collate_fns) == len(batch_sizes)
@@ -154,6 +157,7 @@ class PINNDataModuleWithoutValidation(LightningDataModule):
         self.batch_sizes = batch_sizes
         self.shuffle = shuffle
         self.cycle_dataloader_index = convert_to_list(cycle_dataloader_index)
+        self.pin_memory = pin_memory
 
     def prepare_data(self) -> None:
         pass
@@ -172,7 +176,7 @@ class PINNDataModuleWithoutValidation(LightningDataModule):
                 batch_size=batch_size,
                 collate_fn=collate_fn,
                 shuffle=shuffle,
-                pin_memory=True,
+                pin_memory=self.pin_memory,
             )
             if index in self.cycle_dataloader_index:
                 dataloader = CycleDataLoader(dataloader)

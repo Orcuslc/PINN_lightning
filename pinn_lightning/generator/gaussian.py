@@ -5,6 +5,33 @@ from torch.distributions.normal import Normal
 from .base import GeneratorBase, TransformBase
 
 
+class CombinedGenerator(GeneratorBase):
+    def __init__(self, generators) -> None:
+        super().__init__()
+        self.generators = nn.ModuleList(generators)
+
+    def forward(self):
+        outputs = []
+        for generator in self.generators:
+            outputs.append(generator())
+        return outputs
+
+    def log_prob(self, *args, **kwargs):
+        res = 0.0
+        for generator in self.generators:
+            res += generator.log_prob(*args, **kwargs)
+        return res
+
+    def kl_divergence(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def compute_kl_divergence(self):
+        res = 0.0
+        for generator in self.generators:
+            res += generator.compute_kl_divergence()
+        return res
+
+
 class GaussianGenerator(GeneratorBase):
     def __init__(self,
         mu: torch.Tensor,
