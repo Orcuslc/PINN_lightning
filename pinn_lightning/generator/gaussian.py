@@ -2,34 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions.distribution import Distribution
 from torch.distributions.normal import Normal
-from .base import GeneratorBase, TransformBase
-
-
-class CombinedGenerator(GeneratorBase):
-    def __init__(self, generators) -> None:
-        super().__init__()
-        self.generators = nn.ModuleList(generators)
-
-    def forward(self):
-        outputs = []
-        for generator in self.generators:
-            outputs.append(generator())
-        return outputs
-
-    def log_prob(self, *args, **kwargs):
-        res = 0.0
-        for generator in self.generators:
-            res += generator.log_prob(*args, **kwargs)
-        return res
-
-    def kl_divergence(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def compute_kl_divergence(self):
-        res = 0.0
-        for generator in self.generators:
-            res += generator.compute_kl_divergence()
-        return res
+from .base import GeneratorBase, TransformBase, CombinedGenerator
 
 
 class GaussianGenerator(GeneratorBase):
@@ -38,7 +11,7 @@ class GaussianGenerator(GeneratorBase):
         sigma: torch.Tensor,
         prior: Distribution,
         output_transform: TransformBase = None,
-        threshold: float = 1e-16,
+        threshold: float = None,
         prob_without_prior: bool = False,
         kl_div_weight: float = 1.0,
     ) -> None:
@@ -49,7 +22,10 @@ class GaussianGenerator(GeneratorBase):
         )
         self.prior = prior
         self.output_transform = output_transform
-        self.register_buffer("threshold", torch.tensor([threshold]))
+        if threshold is not None:
+            self.register_buffer("threshold", torch.tensor([threshold]))
+        else:
+            self.threshold = None
         self.prob_without_prior = prob_without_prior
         self.kl_div_weight = kl_div_weight
 
@@ -87,7 +63,9 @@ class GaussianGenerator(GeneratorBase):
         if self.output_transform is not None:
             x = self.output_transform(x)
 
-        x[x < self.threshold] = self.threshold
+        if self.threshold is not None:
+            x[x < self.threshold] = self.threshold
+
         self._cache = x
         return x
 
