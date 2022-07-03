@@ -73,6 +73,7 @@ class PINNDataModule(LightningDataModule):
         self.do_not_split_dataset_index = convert_to_list(do_not_split_dataset_index)
         self.cycle_dataloader_index = convert_to_list(cycle_dataloader_index)
         self.pin_memory = pin_memory
+        self.prepare_data_per_node = False
 
     def prepare_data(self) -> None:
         pass

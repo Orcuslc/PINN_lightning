@@ -14,6 +14,8 @@ class GaussianGenerator(GeneratorBase):
         threshold: float = None,
         prob_without_prior: bool = False,
         kl_div_weight: float = 1.0,
+        mask: torch.Tensor = None,
+        mask_val: float = None,
     ) -> None:
         super().__init__()
         self.mu = nn.Parameter(mu)
@@ -26,6 +28,14 @@ class GaussianGenerator(GeneratorBase):
             self.register_buffer("threshold", torch.tensor([threshold]))
         else:
             self.threshold = None
+
+        if mask is not None:
+            self.register_buffer("mask", mask)
+        else:
+            self.mask = None
+
+        self.mask_val = mask_val
+
         self.prob_without_prior = prob_without_prior
         self.kl_div_weight = kl_div_weight
 
@@ -59,12 +69,16 @@ class GaussianGenerator(GeneratorBase):
         return torch.mean(log_prob_qtheta - log_prob_prior)*self.kl_div_weight
 
     def forward(self):
+
         x = self.reparameterize()
         if self.output_transform is not None:
             x = self.output_transform(x)
 
         if self.threshold is not None:
             x[x < self.threshold] = self.threshold
+
+        if self.mask is not None:
+            x[self.mask] = self.mask_val
 
         self._cache = x
         return x
